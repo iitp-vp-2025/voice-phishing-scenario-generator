@@ -3,7 +3,7 @@
 **This repository presents the core pipeline for phishing scenario generation using an sLLM.**
 
 
-This project explores how recent **technology trends** and **social-context trends** can be incorporated into phishing scenario generation.  
+This project explores how recent **technology trends** and **social trends** can be incorporated into phishing scenario generation.  
 The pipeline first collects and curates trend keywords from recent news, then uses those keywords to generate realistic phishing scenarios with an sLLM.
 
 ---
