@@ -11,20 +11,30 @@ The pipeline first collects and curates trend keywords from recent news, then us
 ## Project Structure
 
 ```bash
-sLLM
-├── Collect_keyword.py              # Collects recent news articles and curates Tech/Social keywords
-├── Generate_scenario.py            # Generates phishing scenarios from curated keywords
+sLLM/
+├── src/
+│   ├── collect_keyword.py          # Collects recent news articles and curates Tech/Social keywords
+│   └── generate_scenario.py        # Generates phishing scenarios from curated keywords
 │
-├── news_articles_tech.jsonl        # Collected tech related news articles
-├── news_articles_social.jsonl      # Collected social related news articles
-├── news_keywords_raw_tech.txt      # Raw extracted tech keywords
-├── news_keywords_raw_social.txt    # Raw extracted social keywords
-├── tech_keywords_curated.txt       # Final curated tech keyword list
-├── social_keywords_curated.txt     # Final curated social keyword list
+├── data/
+│   ├── references/
+│   │   ├── Scenario.pdf            # Reference phishing scenario examples
+│   │   ├── Tactic.pdf              # Reference tactic document
+│   │   └── Technique.pdf           # Reference technique document
+│   │
+│   ├── news/
+│   │   ├── news_articles_tech.jsonl
+│   │   └── news_articles_social.jsonl
+│   │
+│   ├── keywords_raw/
+│   │   ├── news_keywords_raw_tech.txt
+│   │   └── news_keywords_raw_social.txt
+│   │
+│   └── keywords_curated/
+│       ├── tech_keywords_curated.txt
+│       └── social_keywords_curated.txt
 │
-├── Scenario.pdf                    # Reference phishing scenario examples
-├── Tactic.pdf                      # Reference tactic document
-└── Technique.pdf                   # Reference technique document
+└── README.md
 ```
 
 ## Overview
