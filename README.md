@@ -1,22 +1,28 @@
-# sLLM 기반 보이스피싱 시나리오 생성 및 평가 파이프라인
+# sLLM Voice Phishing Generation Pipeline
 
 뉴스 키워드 수집, 한국어 보이스피싱 대화 생성, DistilKoBERT·KEV 평가, 최약 항목 refinement와 최종 랭킹을 한 번에 수행하는 방어 연구용 파이프라인입니다.
 
 ## Project Structure
 
 ```graphql
-voice-phishing-scenario-generator
-├── Collect_keyword.py          # Collect and curate technology/social keywords
-├── Generate_scenario.py        # Generate structured 10-turn Korean dialogues
-├── Evaluate_scenario.py        # Evaluate R and KEV A-D rubric scores
-├── Fine_tuned_judge.py         # Run the fine-tuned DistilKoBERT classifier
-├── Improve_scenario.py         # Refine the weakest KEV subcriterion
-├── Run_end_to_end.py           # (MAIN) Run the complete pipeline
-├── dashboard.py                # Streamlit execution and review page
-├── model_manifest.json         # Private checkpoint integrity metadata
-├── .env.example                # Environment variable template
-├── .gitignore                  # Exclude data, outputs, references, and weights
-├── requirements.txt            # Python dependencies
+sLLM-Voice-Phishing-Generation-Pipeline
+├── generation
+│   ├── __init__.py
+│   ├── keyword_collector.py        # Collect and curate technology/social keywords
+│   └── scenario_generator.py       # Generate structured 10-turn Korean dialogues
+│
+├── scenario_evaluation
+│   ├── __init__.py
+│   ├── evaluator.py                # Evaluate R and KEV A-D rubric scores
+│   ├── realism_judge.py            # Run the fine-tuned DistilKoBERT classifier
+│   ├── refiner.py                  # Refine the weakest KEV subcriterion
+│   └── model_manifest.json         # Private checkpoint integrity metadata
+│
+├── main.py                         # (MAIN) Run the complete pipeline
+├── dashboard.py                    # Streamlit execution and review page
+├── .env.example                    # Environment variable template; commit this file
+├── .gitignore                      # Exclude .env, data, outputs, references, and weights
+├── requirements.txt                # Python dependencies
 └── README.md
 ```
 
@@ -48,7 +54,7 @@ Data, generated results, PDF references, and model weights are local-only and ar
    DISTILKOBERT_DEVICE=auto
    ```
 
-3. Place the approved private DistilKoBERT checkpoint at the path configured by `DISTILKOBERT_MODEL_PATH`. The file SHA-256 must match `model_manifest.json`.
+3. Place the approved private DistilKoBERT checkpoint at the path configured by `DISTILKOBERT_MODEL_PATH`. The file SHA-256 must match `scenario_evaluation/model_manifest.json`.
 
 4. Start or connect to the sLLM and KEV services. When they run on another machine, use an SSH tunnel.
 
@@ -62,7 +68,7 @@ Data, generated results, PDF references, and model weights are local-only and ar
 5. Run the complete pipeline from the project root.
 
    ```bash
-   python Run_end_to_end.py --count 10
+   python main.py --count 10
    ```
 
    ```text
@@ -77,7 +83,7 @@ Data, generated results, PDF references, and model weights are local-only and ar
 6. To re-evaluate an existing local run without regenerating dialogues:
 
    ```bash
-   python Run_end_to_end.py --count 10 --reevaluate-run run_YYYYMMDD_HHMMSS
+   python main.py --count 10 --reevaluate-run run_YYYYMMDD_HHMMSS
    ```
 
 7. Open the review dashboard.

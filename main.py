@@ -2,18 +2,16 @@ import argparse
 import csv
 import json
 import random
-import sys
 from datetime import datetime
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
+from generation import keyword_collector as collector
+from generation import scenario_generator as generator
+from scenario_evaluation import evaluator
+from scenario_evaluation import refiner as improver
 
-import Collect_keyword as collector
-import Evaluate_scenario as evaluator
-import Generate_scenario as generator
-import Improve_scenario as improver
+
+PROJECT_ROOT = Path(__file__).parent.resolve()
 
 
 def parse_args() -> argparse.Namespace:
@@ -21,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--count", type=int, default=10, help="생성하고 평가할 시나리오 수")
     parser.add_argument("--days", type=int, default=30, help="News API 검색 기간")
     parser.add_argument("--max-attempts", type=int, default=15, help="시나리오 생성 최대 시도 횟수")
-    parser.add_argument("--output-root", type=Path, default=SCRIPT_DIR / "outputs" / "end_to_end")
+    parser.add_argument("--output-root", type=Path, default=PROJECT_ROOT / "outputs" / "end_to_end")
     parser.add_argument("--run-name", default="", help="지정하지 않으면 timestamp로 자동 생성")
     parser.add_argument(
         "--reevaluate-run",
@@ -58,7 +56,7 @@ def resolve_run_dir(output_root: Path, run_name: str) -> Path:
     raw = Path(run_name).expanduser()
     candidates = [raw] if raw.is_absolute() else [
         Path.cwd() / raw,
-        SCRIPT_DIR / raw,
+        PROJECT_ROOT / raw,
         output_root / raw,
     ]
     if not raw.is_absolute() and len(raw.parts) == 1 and not raw.name.startswith("run_"):
@@ -103,9 +101,9 @@ def configure_modules(
     generator.PATHS = {
         "tech_kw": collect_dir / "tech_keywords_curated.txt",
         "social_kw": collect_dir / "social_keywords_curated.txt",
-        "tactic": SCRIPT_DIR / "Tactic.pdf",
-        "technique": SCRIPT_DIR / "Technique.pdf",
-        "scenario": SCRIPT_DIR / "Scenario.pdf",
+        "tactic": PROJECT_ROOT / "Tactic.pdf",
+        "technique": PROJECT_ROOT / "Technique.pdf",
+        "scenario": PROJECT_ROOT / "Scenario.pdf",
         "generated_md": generate_dir / "generated_scenarios.md",
         "generated_jsonl": generate_dir / "generated_scenarios.jsonl",
     }
@@ -405,7 +403,7 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Path]:
     reference_names = [
         name
         for name in ("Tactic.pdf", "Technique.pdf", "Scenario.pdf")
-        if (SCRIPT_DIR / name).is_file()
+        if (PROJECT_ROOT / name).is_file()
     ]
     print(f"[*] 생성 reference: {', '.join(reference_names) if reference_names else '없음'}")
     fine_tuned_judge = evaluator.build_fine_tuned_judge(

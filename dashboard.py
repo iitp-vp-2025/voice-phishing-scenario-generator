@@ -12,13 +12,13 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-import Evaluate_scenario as evaluator
-import Generate_scenario as generator
-import Run_end_to_end as end_to_end
+import main as end_to_end
+from generation import scenario_generator as generator
+from scenario_evaluation import evaluator
 
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
-OUTPUTS_DIR = SCRIPT_DIR / "outputs"
+PROJECT_ROOT = Path(__file__).parent.resolve()
+OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 HUMAN_REVIEW_DIR = OUTPUTS_DIR / "human_review"
 HUMAN_REVIEW_CSV = HUMAN_REVIEW_DIR / "human_review_results.csv"
 HUMAN_REVIEW_JSONL = HUMAN_REVIEW_DIR / "human_review_results.jsonl"
@@ -168,7 +168,7 @@ def inject_css() -> None:
 
 def display_path(path: Path) -> str:
     try:
-        return str(path.relative_to(SCRIPT_DIR))
+        return str(path.relative_to(PROJECT_ROOT))
     except ValueError:
         return str(path)
 
@@ -726,7 +726,7 @@ def pipeline_page() -> None:
             count=int(count),
             days=int(days),
             max_attempts=int(max_attempts),
-            output_root=end_to_end.SCRIPT_DIR / "outputs" / "end_to_end",
+            output_root=end_to_end.PROJECT_ROOT / "outputs" / "end_to_end",
             run_name=run_name.strip(),
             reevaluate_run=reevaluate_run.strip(),
             generation_api_url=generation_api_url.strip(),

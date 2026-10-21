@@ -25,13 +25,13 @@ from pdfminer.high_level import extract_text
 
 load_dotenv()
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
-GENERATE_OUTPUT_DIR = SCRIPT_DIR / "outputs" / "generate_scenario"
-OUTPUT_DIR = SCRIPT_DIR / "outputs" / "evaluate_scenario"
-DEFAULT_STUDENT_PATH = SCRIPT_DIR / "models" / "realism" / "best_student.pt"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+GENERATE_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "generate_scenario"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "evaluate_scenario"
+DEFAULT_STUDENT_PATH = PROJECT_ROOT / "models" / "realism" / "best_student.pt"
 PATHS = {
     "generated_jsonl": GENERATE_OUTPUT_DIR / "generated_scenarios.jsonl",
-    "scenario_pdf": SCRIPT_DIR / "Scenario.pdf",
+    "scenario_pdf": PROJECT_ROOT / "Scenario.pdf",
     "eval_jsonl": OUTPUT_DIR / "dialogue_evaluations.jsonl",
     "eval_csv": OUTPUT_DIR / "dialogue_evaluations.csv",
 }
@@ -326,7 +326,7 @@ def call_kev(
     return data
 
 
-# Compatibility helpers used only by Improve_scenario.py's generative rewrite step.
+# Compatibility helpers used by the refinement step.
 def call_llm(
     prompt: str,
     api_url: str = SLLM_API_URL,
@@ -440,7 +440,7 @@ def build_fine_tuned_judge(
     max_length: int = 512,
     threshold: float = DISTILKOBERT_THRESHOLD,
 ) -> Any:
-    from Fine_tuned_judge import DistilKoBERTJudge
+    from scenario_evaluation.realism_judge import DistilKoBERTJudge
 
     judge = DistilKoBERTJudge(
         model_path=model_path,

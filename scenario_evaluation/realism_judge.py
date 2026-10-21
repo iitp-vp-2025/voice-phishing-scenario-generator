@@ -16,8 +16,8 @@ from typing import Any
 
 STUDENT_HF_ID = "monologg/distilkobert"
 STUDENT_HF_REVISION = "4a1fd77263770962fa9d846fc672da47f4da9eaa"
-SCRIPT_DIR = Path(__file__).parent.resolve()
-MODEL_MANIFEST_PATH = SCRIPT_DIR / "model_manifest.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MODEL_MANIFEST_PATH = Path(__file__).with_name("model_manifest.json")
 
 
 def file_sha256(path: Path) -> str:
@@ -31,7 +31,7 @@ def file_sha256(path: Path) -> str:
 def expected_checkpoint_sha256(path: Path) -> str:
     manifest = json.loads(MODEL_MANIFEST_PATH.read_text(encoding="utf-8"))
     student = manifest["realism_student"]
-    published_path = (SCRIPT_DIR / student["path"]).resolve()
+    published_path = (PROJECT_ROOT / student["path"]).resolve()
     return str(student["sha256"]) if path.resolve() == published_path else ""
 
 
@@ -54,7 +54,7 @@ class DistilKoBERTJudge:
             raise ValueError("현실성 평가에는 DISTILKOBERT_MODEL_PATH가 필요합니다.")
         path = Path(model_path).expanduser()
         if not path.is_absolute():
-            path = SCRIPT_DIR / path
+            path = PROJECT_ROOT / path
         if not path.is_file():
             raise FileNotFoundError(f"DistilKoBERT checkpoint를 찾을 수 없습니다: {path}")
         if not 0.0 <= threshold <= 1.0:
@@ -68,7 +68,7 @@ class DistilKoBERTJudge:
                 "DistilKoBERT checkpoint SHA-256이 model_manifest.json과 일치하지 않습니다."
             )
         try:
-            self._model_name = str(path.resolve().relative_to(SCRIPT_DIR))
+            self._model_name = str(path.resolve().relative_to(PROJECT_ROOT))
         except ValueError:
             self._model_name = self.model_path
         self.tokenizer_path = tokenizer_path or base_model

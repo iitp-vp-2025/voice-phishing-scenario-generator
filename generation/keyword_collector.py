@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
-OUTPUT_DIR = SCRIPT_DIR / "outputs" / "collect_keyword"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "collect_keyword"
 NEWS_API_URL = "https://newsapi.org/v2/everything"
 NEWS_API_KEY = os.environ.get("NEWS_API_KEY", "")
 MODEL_URL = os.environ.get("SLLM_API_URL") or os.environ.get("OLLAMA_API_URL", "")

@@ -9,8 +9,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import Evaluate_scenario as evaluator
-import Generate_scenario as generator
+from generation import scenario_generator as generator
+from scenario_evaluation import evaluator
 
 
 MAX_REFINEMENT_ATTEMPTS = 2
@@ -345,4 +345,4 @@ def write_trace(rows: list[dict[str, Any]], jsonl_path: Path, csv_path: Path) ->
 
 
 if __name__ == "__main__":
-    raise SystemExit("Improve_scenario.py는 Run_end_to_end.py의 필수 refinement 단계에서 실행됩니다.")
+    raise SystemExit("refiner.py는 main.py의 필수 refinement 단계에서 실행됩니다.")
