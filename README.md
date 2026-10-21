@@ -130,7 +130,7 @@ The PDFs are optional and stay outside Git. Place them under `references/` using
 | `Technique.pdf` | Provides concrete methods used to realize a tactic, such as impersonation, authentication requests, channel switching, or technical manipulation. |
 | `Scenario.pdf` | Provides existing scenario context. Generation uses it to avoid simple repetition, and KEV uses it as optional comparison context when scoring A-D. |
 
-If a private dialogue-style reference is available, it can additionally be placed at `references/positive_format_refs.jsonl`. It affects generation style only and is not sent to DistilKoBERT or KEV.
+If a private dialogue-style reference is available, it can additionally be placed at `references/positive_format_refs.jsonl`. It is used during generation for dialogue style and is not sent to DistilKoBERT or KEV.
 
 ## Optional DistilKoBERT Model
 
