@@ -32,7 +32,11 @@ datasets/
 *.log
 
 # Model checkpoints are private local artifacts and are never published.
-models/
+# Keep only the placement guide visible in Git.
+models/*
+!models/realism/
+models/realism/*
+!models/realism/README.md
 checkpoints/
 *.safetensors
 *.pt

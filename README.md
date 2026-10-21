@@ -21,6 +21,11 @@ sLLM-Voice-Phishing-Generation-Pipeline
 ├── references
 │   └── README.md                   # Placement guide for local-only references
 │
+├── models
+│   └── realism
+│       ├── README.md               # Placement guide for the optional R model
+│       └── best_student.pt          # Local-only; not included in Git
+│
 ├── main.py                         # (MAIN) Run the complete pipeline
 ├── dashboard.py                    # Streamlit execution and review page
 ├── .env.example                    # Environment variable template; commit this file
@@ -29,7 +34,7 @@ sLLM-Voice-Phishing-Generation-Pipeline
 └── README.md
 ```
 
-Data, generated results, reference contents, and model weights are local-only and are not included in this repository. The tracked `references/README.md` keeps the expected local layout visible after cloning.
+Data, generated results, reference contents, and model weights are local-only and are not included in this repository. The tracked placement guides keep the expected `references/` and `models/realism/` layouts visible after cloning.
 
 ## How to Run?
 
