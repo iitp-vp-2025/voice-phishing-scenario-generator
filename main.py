@@ -12,6 +12,7 @@ from scenario_evaluation import refiner as improver
 
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
+REFERENCES_DIR = PROJECT_ROOT / "references"
 
 
 def parse_args() -> argparse.Namespace:
@@ -107,9 +108,9 @@ def configure_modules(
     generator.PATHS = {
         "tech_kw": collect_dir / "tech_keywords_curated.txt",
         "social_kw": collect_dir / "social_keywords_curated.txt",
-        "tactic": PROJECT_ROOT / "Tactic.pdf",
-        "technique": PROJECT_ROOT / "Technique.pdf",
-        "scenario": PROJECT_ROOT / "Scenario.pdf",
+        "tactic": REFERENCES_DIR / "Tactic.pdf",
+        "technique": REFERENCES_DIR / "Technique.pdf",
+        "scenario": REFERENCES_DIR / "Scenario.pdf",
         "generated_md": generate_dir / "generated_scenarios.md",
         "generated_jsonl": generate_dir / "generated_scenarios.jsonl",
     }
@@ -415,7 +416,7 @@ def run_pipeline(args: argparse.Namespace) -> dict[str, Path]:
     reference_names = [
         name
         for name in ("Tactic.pdf", "Technique.pdf", "Scenario.pdf")
-        if (PROJECT_ROOT / name).is_file()
+        if (REFERENCES_DIR / name).is_file()
     ]
     print(f"[*] 생성 reference: {', '.join(reference_names) if reference_names else '없음'}")
     fine_tuned_judge = evaluator.build_fine_tuned_judge(

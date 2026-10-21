@@ -27,12 +27,13 @@ from pdfminer.high_level import extract_text
 load_dotenv()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REFERENCES_DIR = PROJECT_ROOT / "references"
 GENERATE_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "generate_scenario"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / "evaluate_scenario"
 DEFAULT_STUDENT_PATH = PROJECT_ROOT / "models" / "realism" / "best_student.pt"
 PATHS = {
     "generated_jsonl": GENERATE_OUTPUT_DIR / "generated_scenarios.jsonl",
-    "scenario_pdf": PROJECT_ROOT / "Scenario.pdf",
+    "scenario_pdf": REFERENCES_DIR / "Scenario.pdf",
     "eval_jsonl": OUTPUT_DIR / "dialogue_evaluations.jsonl",
     "eval_csv": OUTPUT_DIR / "dialogue_evaluations.csv",
 }

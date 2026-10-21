@@ -15,15 +15,16 @@ from pdfminer.high_level import extract_text
 
 # CONFIGURATION
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REFERENCES_DIR = PROJECT_ROOT / "references"
 COLLECT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "collect_keyword"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / "generate_scenario"
 
 PATHS = {
     "tech_kw": COLLECT_OUTPUT_DIR / "tech_keywords_curated.txt",
     "social_kw": COLLECT_OUTPUT_DIR / "social_keywords_curated.txt",
-    "tactic": PROJECT_ROOT / "Tactic.pdf",
-    "technique": PROJECT_ROOT / "Technique.pdf",
-    "scenario": PROJECT_ROOT / "Scenario.pdf",
+    "tactic": REFERENCES_DIR / "Tactic.pdf",
+    "technique": REFERENCES_DIR / "Technique.pdf",
+    "scenario": REFERENCES_DIR / "Scenario.pdf",
     "generated_md": OUTPUT_DIR / "generated_scenarios.md",
     "generated_jsonl": OUTPUT_DIR / "generated_scenarios.jsonl",
 }
@@ -35,7 +36,7 @@ MAX_DIALOGUE_GENERATION_ATTEMPTS = 2
 REFERENCE_CHAR_LIMIT = 2500
 FORMAT_REFERENCE_CHAR_LIMIT = 1200
 FORBIDDEN_FOREIGN_SCRIPT = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]")
-LOCAL_GENERATION_REFERENCE_PATH = PROJECT_ROOT / "tmp" / "positive_format_refs.jsonl"
+LOCAL_GENERATION_REFERENCE_PATH = REFERENCES_DIR / "positive_format_refs.jsonl"
 
 
 def resolve_generation_reference_path(path_text: str = "") -> str:

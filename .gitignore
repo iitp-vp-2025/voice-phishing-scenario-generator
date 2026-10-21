@@ -50,5 +50,8 @@ tests/
 docs/
 Run_pipeline.py
 
-# Local/reference documents are not distributed.
+# Local/reference inputs are not distributed. references/README.md remains public
+# so new users can see where private files belong.
+references/*
+!references/README.md
 *.pdf

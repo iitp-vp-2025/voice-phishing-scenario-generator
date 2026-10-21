@@ -18,6 +18,9 @@ sLLM-Voice-Phishing-Generation-Pipeline
 │   ├── refiner.py                  # Refine the weakest KEV subcriterion
 │   └── model_manifest.json         # Private checkpoint integrity metadata
 │
+├── references
+│   └── README.md                   # Placement guide for local-only references
+│
 ├── main.py                         # (MAIN) Run the complete pipeline
 ├── dashboard.py                    # Streamlit execution and review page
 ├── .env.example                    # Environment variable template; commit this file
@@ -26,7 +29,7 @@ sLLM-Voice-Phishing-Generation-Pipeline
 └── README.md
 ```
 
-Data, generated results, PDF references, and model weights are local-only and are not included in this repository.
+Data, generated results, reference contents, and model weights are local-only and are not included in this repository. The tracked `references/README.md` keeps the expected local layout visible after cloning.
 
 ## How to Run?
 
@@ -54,9 +57,11 @@ Data, generated results, PDF references, and model weights are local-only and ar
    DISTILKOBERT_DEVICE=auto
    ```
 
-3. (Optional) To include the R axis, place the approved private DistilKoBERT checkpoint at `DISTILKOBERT_MODEL_PATH`. Its SHA-256 must match `scenario_evaluation/model_manifest.json`. If the path is empty or the file does not exist, the pipeline automatically runs in KEV-only A-D mode.
+3. (Optional) Add generation/evaluation references under `references/`. See [Local Inputs](#local-inputs) for the exact filenames and purpose of each file. Missing references are skipped automatically.
 
-4. Start or connect to the sLLM and KEV services. When they run on another machine, use an SSH tunnel.
+4. (Optional) To include the R axis, place the approved private DistilKoBERT checkpoint at `DISTILKOBERT_MODEL_PATH`. Its SHA-256 must match `scenario_evaluation/model_manifest.json`. If the path is empty or the file does not exist, the pipeline automatically runs in KEV-only A-D mode.
+
+5. Start or connect to the sLLM and KEV services. When they run on another machine, use an SSH tunnel.
 
    ```bash
    ssh -p <SSH_PORT> -N \
@@ -65,7 +70,7 @@ Data, generated results, PDF references, and model weights are local-only and ar
      <USER>@<SERVER>
    ```
 
-5. Run the complete pipeline from the project root.
+6. Run the complete pipeline from the project root.
 
    ```bash
    python main.py --count 10
@@ -80,13 +85,13 @@ Data, generated results, PDF references, and model weights are local-only and ar
    → final evaluation and ranking
    ```
 
-6. To re-evaluate an existing local run without regenerating dialogues:
+7. To re-evaluate an existing local run without regenerating dialogues:
 
    ```bash
    python main.py --count 10 --reevaluate-run run_YYYYMMDD_HHMMSS
    ```
 
-7. Open the review dashboard.
+8. Open the review dashboard.
 
    ```bash
    streamlit run dashboard.py
@@ -115,18 +120,25 @@ KEV-only ranking = 100 × A^0.3571 × B^0.2143 × C^0.2143 × D^0.2143
 
 Each result records `evaluation_mode` as `full` or `kev_only`; KEV-only mode leaves all R fields empty instead of fabricating an R score.
 
-## Local-only Files
+## Local Inputs
 
-The following paths are excluded from Git:
+Put optional reference inputs in `references/`. The pipeline checks these exact paths automatically; missing files are skipped.
 
-```text
-models/realism/best_student.pt
-tmp/positive_format_refs.jsonl
-Tactic.pdf
-Technique.pdf
-Scenario.pdf
-outputs/
+| Local path | Used by | Purpose |
+|---|---|---|
+| `references/Tactic.pdf` | Generation | Supplies high-level attack-tactic context to the dialogue-generation prompt. |
+| `references/Technique.pdf` | Generation | Supplies concrete technical and social-engineering technique context. |
+| `references/Scenario.pdf` | Generation and KEV evaluation | Provides existing-scenario context during generation and optional comparison context during A-D evaluation. |
+| `references/positive_format_refs.jsonl` | Generation only | Supplies private positive-call examples for dialogue style and interaction structure. It is never sent to DistilKoBERT or KEV. |
+| `models/realism/best_student.pt` | Optional R evaluation | Supplies the fine-tuned DistilKoBERT weights. Without it, the pipeline automatically uses KEV-only A-D ranking. |
+
+`positive_format_refs.jsonl` accepts one JSON object per line. A minimal record is:
+
+```json
+{"text": "speaker와 발화가 포함된 통화 전사", "label": 1}
 ```
+
+All files above remain excluded from Git. `outputs/` is also ignored, but it is created automatically by the pipeline and users should not place input files there.
 
 ## Acknowledgement
 

@@ -722,7 +722,10 @@ def pipeline_page() -> None:
             )
 
         with st.expander("고급 설정", expanded=False):
-            st.caption("Tactic.pdf, Technique.pdf, Scenario.pdf는 존재할 때 자동으로 사용합니다.")
+            st.caption(
+                "references/에 둔 Tactic.pdf, Technique.pdf, Scenario.pdf와 "
+                "positive_format_refs.jsonl은 존재할 때 자동으로 사용합니다."
+            )
             seed = st.number_input("Seed", min_value=0, value=42)
         submitted = st.form_submit_button("파이프라인 실행", type="primary")
 
