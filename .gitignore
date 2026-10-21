@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS/editor noise
+.DS_Store
+.Rhistory
+.idea/
+.vscode/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Runtime outputs
+outputs/
+tmp/
+data/
+dataset/
+datasets/
+
+# Data and evaluation artifacts stay local, including generated/synthetic data.
+*.csv
+*.tsv
+*.jsonl
+*.xlsx
+*.xls
+*.parquet
+*.log
+
+# Model checkpoints are private local artifacts and are never published.
+models/
+checkpoints/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.onnx
+pytorch_model.bin
+
+# Local reports and rendered artifacts
+Report/
+*.tmp
+
+# Local/reference documents are not distributed.
+*.pdf

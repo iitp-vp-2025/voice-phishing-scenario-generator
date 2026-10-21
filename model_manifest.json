@@ -1,0 +1,19 @@
+{
+  "realism_student": {
+    "path": "models/realism/best_student.pt",
+    "sha256": "a1f70185412879684b2b1739792f682fe6e0daeb18e215457a6891aa84e83f77",
+    "size_bytes": 111243542,
+    "distribution": "private_local_only",
+    "included_in_repository": false,
+    "format": "pytorch_state_dict",
+    "architecture": "DistilKoBERT encoder + Dropout(0.1) + Linear(768, 2)",
+    "base_model": "monologg/distilkobert",
+    "base_revision": "4a1fd77263770962fa9d846fc672da47f4da9eaa",
+    "class_order": [
+      "normal",
+      "voice_phishing"
+    ],
+    "default_threshold": 0.5,
+    "max_length": 512
+  }
+}
