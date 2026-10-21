@@ -1,6 +1,6 @@
 # sLLM Voice Phishing Generation Pipeline
 
-뉴스 키워드 수집, 한국어 보이스피싱 대화 생성, DistilKoBERT·KEV 평가, 최약 항목 refinement와 최종 랭킹을 한 번에 수행하는 방어 연구용 파이프라인입니다.
+뉴스 키워드 수집, 한국어 보이스피싱 대화 생성, KEV 평가, 최약 항목 refinement와 최종 랭킹을 한 번에 수행하는 방어 연구용 파이프라인입니다. 승인된 DistilKoBERT checkpoint가 있으면 현실성 R 평가도 자동으로 추가합니다.
 
 ## Project Structure
 
@@ -54,7 +54,7 @@ Data, generated results, PDF references, and model weights are local-only and ar
    DISTILKOBERT_DEVICE=auto
    ```
 
-3. Place the approved private DistilKoBERT checkpoint at the path configured by `DISTILKOBERT_MODEL_PATH`. The file SHA-256 must match `scenario_evaluation/model_manifest.json`.
+3. (Optional) To include the R axis, place the approved private DistilKoBERT checkpoint at `DISTILKOBERT_MODEL_PATH`. Its SHA-256 must match `scenario_evaluation/model_manifest.json`. If the path is empty or the file does not exist, the pipeline automatically runs in KEV-only A-D mode.
 
 4. Start or connect to the sLLM and KEV services. When they run on another machine, use an SSH tunnel.
 
@@ -75,7 +75,7 @@ Data, generated results, PDF references, and model weights are local-only and ar
    News collection
    → keyword selection
    → 10-turn dialogue generation
-   → initial R/A/B/C/D evaluation
+   → initial R/A/B/C/D evaluation (or A/B/C/D when no checkpoint exists)
    → weakest KEV subcriterion refinement
    → final evaluation and ranking
    ```
@@ -96,21 +96,24 @@ Data, generated results, PDF references, and model weights are local-only and ar
 
 ## Evaluation
 
-| Axis | Description | Ranking weight |
-|---|---|---:|
-| R | Voice-phishing realism from fine-tuned DistilKoBERT | 30% |
-| A | Diversity | 25% |
-| B | Feasibility | 15% |
-| C | Completeness | 15% |
-| D | Generalizability and adaptability | 15% |
+| Axis | Description | Full mode | KEV-only mode |
+|---|---|---:|---:|
+| R | Voice-phishing realism from fine-tuned DistilKoBERT | 30% | Not used |
+| A | Diversity | 25% | 35.71% |
+| B | Feasibility | 15% | 21.43% |
+| C | Completeness | 15% | 21.43% |
+| D | Generalizability and adaptability | 15% | 21.43% |
 
 - R uses the mean of the two highest `P(voice_phishing)` values from turn-boundary-preserving 512-token chunks.
 - A-D use 11 KEV score questions and only evidence present in the generated dialogue.
 - Refinement targets the weakest A-D subcriterion and replaces at most three turns.
 
 ```text
-ranking = 100 × R^0.30 × A^0.25 × B^0.15 × C^0.15 × D^0.15
+full ranking     = 100 × R^0.30 × A^0.25 × B^0.15 × C^0.15 × D^0.15
+KEV-only ranking = 100 × A^0.3571 × B^0.2143 × C^0.2143 × D^0.2143
 ```
+
+Each result records `evaluation_mode` as `full` or `kev_only`; KEV-only mode leaves all R fields empty instead of fabricating an R score.
 
 ## Local-only Files
 

@@ -1,8 +1,9 @@
-"""Evaluate every generated dialogue with DistilKoBERT + KEV.
+"""Evaluate every generated dialogue with KEV and optional DistilKoBERT.
 
-R (voice-phishing realism) is the student's P(VP).  KEV scores the remaining
-A-D rubric through its structured ``/v1/systemone`` API.  There is no pass
-gate: every scenario receives a ranking score and remains in the output.
+When its checkpoint exists, R (voice-phishing realism) is the student's P(VP).
+Otherwise, ranking uses only the KEV A-D rubric through its structured
+``/v1/systemone`` API. There is no pass gate: every scenario receives a ranking
+score and remains in the output.
 """
 
 from __future__ import annotations
@@ -73,6 +74,12 @@ AXES = {
 }
 AXIS_MAX = {axis: sum(WEIGHTS[key] for key in keys) for axis, keys in AXES.items()}
 RANKING_WEIGHTS = {"R": 0.30, "A": 0.25, "B": 0.15, "C": 0.15, "D": 0.15}
+KEV_ONLY_RANKING_WEIGHTS = {
+    "A": 0.25 / 0.70,
+    "B": 0.15 / 0.70,
+    "C": 0.15 / 0.70,
+    "D": 0.15 / 0.70,
+}
 
 KR = {
     "R": "Voice-Phishing Realism",
@@ -419,8 +426,10 @@ def normalize_kev_answers(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def calculate_ranking(realism_probability: float, axis_normalized: dict[str, float]) -> tuple[float, dict[str, float]]:
-    normalized = {"R": float(realism_probability), **{axis: float(axis_normalized[axis]) for axis in AXES}}
+def weighted_geometric_ranking(
+    normalized: dict[str, float],
+    weights: dict[str, float],
+) -> tuple[float, dict[str, float]]:
     for axis, value in normalized.items():
         if not 0.0 <= value <= 1.0:
             raise ValueError(f"정규화 점수 {axis}는 0~1 범위여야 합니다: {value}")
@@ -428,9 +437,19 @@ def calculate_ranking(realism_probability: float, axis_normalized: dict[str, flo
         score = 0.0
     else:
         score = 100.0 * math.exp(
-            sum(RANKING_WEIGHTS[axis] * math.log(value) for axis, value in normalized.items())
+            sum(weights[axis] * math.log(value) for axis, value in normalized.items())
         )
     return round(score, 6), {axis: round(value, 6) for axis, value in normalized.items()}
+
+
+def calculate_ranking(realism_probability: float, axis_normalized: dict[str, float]) -> tuple[float, dict[str, float]]:
+    normalized = {"R": float(realism_probability), **{axis: float(axis_normalized[axis]) for axis in AXES}}
+    return weighted_geometric_ranking(normalized, RANKING_WEIGHTS)
+
+
+def calculate_kev_only_ranking(axis_normalized: dict[str, float]) -> tuple[float, dict[str, float]]:
+    normalized = {axis: float(axis_normalized[axis]) for axis in AXES}
+    return weighted_geometric_ranking(normalized, KEV_ONLY_RANKING_WEIGHTS)
 
 
 def build_fine_tuned_judge(
@@ -440,6 +459,15 @@ def build_fine_tuned_judge(
     max_length: int = 512,
     threshold: float = DISTILKOBERT_THRESHOLD,
 ) -> Any:
+    raw_path = model_path.strip()
+    path = Path(raw_path).expanduser() if raw_path else None
+    if path is not None and not path.is_absolute():
+        path = PROJECT_ROOT / path
+    if path is None or not path.is_file():
+        location = str(path) if path is not None else "미설정"
+        print(f"[WARN] DistilKoBERT checkpoint가 없어 KEV-only 모드로 실행합니다: {location}")
+        return None
+
     from scenario_evaluation.realism_judge import DistilKoBERTJudge
 
     judge = DistilKoBERTJudge(
@@ -455,6 +483,12 @@ def build_fine_tuned_judge(
 
 
 def fine_tuned_model_metadata(fine_tuned_judge: Any) -> dict[str, Any]:
+    if fine_tuned_judge is None:
+        return {
+            "backend": "disabled",
+            "model": "",
+            "reason": "checkpoint_not_found",
+        }
     return {
         "backend": fine_tuned_judge.backend,
         "model": fine_tuned_judge.model_name,
@@ -473,6 +507,23 @@ def attach_realism(
     fine_tuned_judge: Any,
     dialogue: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    if fine_tuned_judge is None:
+        ranking_score, normalized = calculate_kev_only_ranking(result["axis_normalized"])
+        result.update({
+            "evaluation_mode": "kev_only",
+            "realism_prediction": None,
+            "realism_label": "not_evaluated",
+            "realism_probability": None,
+            "realism_confidence": None,
+            "fine_tuned_judgment": {},
+            "ranking_score": ranking_score,
+            "normalized_scores": normalized,
+        })
+        result["summary"] = " · ".join(
+            f"{axis} {normalized[axis] * 100:.1f}%" for axis in AXES
+        )
+        return result
+
     if dialogue and hasattr(fine_tuned_judge, "predict_dialogue"):
         judgment = fine_tuned_judge.predict_dialogue(dialogue)
     else:
@@ -480,6 +531,7 @@ def attach_realism(
     probability = float(judgment["vp_probability"])
     ranking_score, normalized = calculate_ranking(probability, result["axis_normalized"])
     result.update({
+        "evaluation_mode": "full",
         "realism_prediction": int(judgment["prediction"]),
         "realism_label": judgment["label"],
         "realism_probability": round(probability, 6),
@@ -529,6 +581,7 @@ def evaluate_records(
             model=model,
             fine_tuned_judge=fine_tuned_judge,
         )
+        ranking_weights = RANKING_WEIGHTS if fine_tuned_judge is not None else KEV_ONLY_RANKING_WEIGHTS
         rows.append({
             "scenario_id": scenario_id(scenario),
             "evaluated_at": now,
@@ -543,10 +596,13 @@ def evaluate_records(
             "scenario": scenario,
             "criteria_labels": KR,
             "rubric_weights": WEIGHTS,
-            "ranking_weights": RANKING_WEIGHTS,
+            "ranking_weights": ranking_weights,
             "evaluation": result,
         })
-        print(f"Realism: {result['realism_prediction']} / P(VP)={result['realism_probability']}")
+        if result["evaluation_mode"] == "full":
+            print(f"Realism: {result['realism_prediction']} / P(VP)={result['realism_probability']}")
+        else:
+            print("Realism: 미사용 (KEV-only)")
         print(f"Ranking score: {result['ranking_score']}")
     return rows
 
@@ -564,6 +620,7 @@ def write_results(rows: list[dict[str, Any]], jsonl_path: Path, csv_path: Path, 
         "scenario_title",
         "scenario_preview",
         "scenario_id",
+        "evaluation_mode",
         "ranking_score",
         "realism_prediction",
         "realism_probability",
@@ -592,6 +649,7 @@ def write_results(rows: list[dict[str, Any]], jsonl_path: Path, csv_path: Path, 
                 "scenario_title": title or metadata.get("title", ""),
                 "scenario_preview": preview,
                 "scenario_id": row["scenario_id"],
+                "evaluation_mode": result.get("evaluation_mode", "full"),
                 "ranking_score": result.get("ranking_score", ""),
                 "realism_prediction": result.get("realism_prediction", ""),
                 "realism_probability": result.get("realism_probability", ""),
@@ -647,11 +705,15 @@ def evaluate_file(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="DistilKoBERT 현실성 + KEV rubric 평가")
+    parser = argparse.ArgumentParser(description="KEV rubric과 선택적 DistilKoBERT 현실성 평가")
     parser.add_argument("-i", "--input", type=Path, default=PATHS["generated_jsonl"])
     parser.add_argument("--kev-api-url", "--api-url", dest="kev_api_url", default=KEV_API_URL)
     parser.add_argument("--kev-model", "--model", dest="kev_model", default=KEV_MODEL_NAME)
-    parser.add_argument("--distilbert-model", default=DISTILBERT_MODEL_PATH)
+    parser.add_argument(
+        "--distilbert-model",
+        default=DISTILBERT_MODEL_PATH,
+        help="선택 사항; 파일이 없거나 빈 값이면 KEV-only A-D 모드로 실행",
+    )
     parser.add_argument("--distilbert-tokenizer", default=DISTILBERT_TOKENIZER_PATH)
     parser.add_argument("--distilbert-device", default=DISTILBERT_DEVICE)
     parser.add_argument("--distilbert-max-length", type=int, default=512)

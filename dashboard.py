@@ -359,6 +359,7 @@ def enrich_from_jsonl(df: pd.DataFrame, source_path: Path) -> pd.DataFrame:
         values = {
             "scenario": source.get("scenario", ""),
             "dialogue_json": json.dumps(source.get("dialogue", []), ensure_ascii=False),
+            "evaluation_mode": evaluation.get("evaluation_mode", "full"),
             "ranking_score": evaluation.get("ranking_score", ""),
             "realism_prediction": evaluation.get("realism_prediction", ""),
             "realism_probability": evaluation.get("realism_probability", ""),
@@ -391,7 +392,7 @@ def load_source(path_text: str) -> pd.DataFrame:
     df = enrich_from_jsonl(df, path)
     df["source_file"] = display_path(path)
 
-    for col in ["rank", "e2e_index", "scenario_title", "scenario_preview", "scenario_id", "ranking_score", "realism_prediction", "realism_probability", "realism_confidence", "kev_confidences", *AXES, *SUBSCORES, "weakest_kev_axis", "weakest_kev_subcriterion", "refinement_status", "refinement_target_axis", "refinement_target_subcriterion", "changed_turns", "change_summary", "turn_count", "dialogue_json", "summary", "scenario", "tech_keywords", "social_keyword", "selected_reason"]:
+    for col in ["rank", "e2e_index", "scenario_title", "scenario_preview", "scenario_id", "evaluation_mode", "ranking_score", "realism_prediction", "realism_probability", "realism_confidence", "kev_confidences", *AXES, *SUBSCORES, "weakest_kev_axis", "weakest_kev_subcriterion", "refinement_status", "refinement_target_axis", "refinement_target_subcriterion", "changed_turns", "change_summary", "turn_count", "dialogue_json", "summary", "scenario", "tech_keywords", "social_keyword", "selected_reason"]:
         if col not in df.columns:
             df[col] = ""
 
@@ -496,7 +497,11 @@ def show_review_summary(row: pd.Series) -> None:
     axis_text = " · ".join(f"{axis}. {AXIS_LABELS.get(axis, axis)}" for axis in weakest) if weakest else "약점축 정보 없음"
     summary = safe_text(row.get("summary")) or "-"
     prediction = safe_text(row.get("realism_prediction"))
-    realism_text = "보이스피싱(1)" if prediction == "1.0" or prediction == "1" else "일반/비보이스피싱(0)"
+    evaluation_mode = safe_text(row.get("evaluation_mode")) or "full"
+    if evaluation_mode == "kev_only" or not prediction:
+        realism_text = "미사용 (checkpoint 없음)"
+    else:
+        realism_text = "보이스피싱(1)" if prediction in {"1.0", "1"} else "일반/비보이스피싱(0)"
     rows = [
         ("현실성 이진 판정", realism_text),
         ("랭킹 점수", f"{fmt_number(row.get('ranking_score')) or '-'} / 100"),
@@ -532,6 +537,12 @@ def show_evaluation_detail(row: pd.Series) -> None:
 
     with axis_tab:
         axis_rows = []
+        evaluation_mode = safe_text(row.get("evaluation_mode")) or "full"
+        ranking_weights = (
+            evaluator.KEV_ONLY_RANKING_WEIGHTS
+            if evaluation_mode == "kev_only"
+            else evaluator.RANKING_WEIGHTS
+        )
         for axis in AXES:
             value = row.get(axis)
             maximum = AXIS_MAX[axis]
@@ -546,7 +557,7 @@ def show_evaluation_detail(row: pd.Series) -> None:
                 "축": f"{axis}. {AXIS_LABELS[axis]}",
                 "원점수": f"{numeric_value:.3f}/{maximum}",
                 "정규화": f"{normalized * 100:.1f}%",
-                "랭킹 비중": f"{evaluator.RANKING_WEIGHTS[axis] * 100:.0f}%",
+                "랭킹 비중": f"{ranking_weights[axis] * 100:.2f}%",
             })
         st.dataframe(pd.DataFrame(axis_rows), use_container_width=True, hide_index=True)
         st.caption("KEV score API는 생성형 평가 근거 문장을 만들지 않고 점수·확률·confidence를 반환합니다.")
@@ -630,6 +641,7 @@ def save_human_review(row: pd.Series, decision: str, notes: str, reviewer: str, 
         "e2e_index": safe_text(row.get("e2e_index")),
         "scenario_title": safe_text(row.get("scenario_title")),
         "ranking_score": safe_text(row.get("ranking_score")),
+        "evaluation_mode": safe_text(row.get("evaluation_mode")) or "full",
         "realism_prediction": safe_text(row.get("realism_prediction")),
         "realism_probability": safe_text(row.get("realism_probability")),
         "weakest_kev_axis": safe_text(row.get("weakest_kev_axis")),
@@ -666,8 +678,8 @@ def pipeline_page() -> None:
     st.markdown(
         """
         <div class="intro-box">
-        생성은 기존 sLLM을 사용합니다. 현실성은 프롬프트 없이 fine-tuned DistilKoBERT의 P(VP)로,
-        다양성·실행 가능성·완결성·일반화는 KEV의 구조화된 rubric 점수로 평가한 뒤 모든 시나리오를 랭킹합니다.
+        생성은 기존 sLLM을 사용합니다. checkpoint가 있으면 현실성 R과 KEV A-D를 함께 평가하고,
+        없으면 R을 제외한 KEV A-D 점수만으로 모든 시나리오를 랭킹합니다.
         </div>
         """,
         unsafe_allow_html=True,
@@ -691,7 +703,11 @@ def pipeline_page() -> None:
             kev_model = st.text_input("KEV 모델", value=evaluator.KEV_MODEL_NAME)
         with right:
             st.markdown("**현실성 판정 모델**")
-            distilbert_model = st.text_input("DistilKoBERT checkpoint 경로", value=evaluator.DISTILBERT_MODEL_PATH)
+            distilbert_model = st.text_input(
+                "DistilKoBERT checkpoint 경로(선택)",
+                value=evaluator.DISTILBERT_MODEL_PATH,
+                help="파일이 없거나 비워두면 KEV-only A/B/C/D 평가로 자동 실행합니다.",
+            )
             distilbert_tokenizer = st.text_input(
                 "Tokenizer 경로(선택)",
                 value=evaluator.DISTILBERT_TOKENIZER_PATH,
@@ -716,8 +732,6 @@ def pipeline_page() -> None:
             missing.append("생성 API URL/모델")
         if not kev_api_url or not kev_model:
             missing.append("KEV API URL/모델")
-        if not distilbert_model:
-            missing.append("DistilKoBERT checkpoint 경로")
         if missing:
             st.error("필수 설정이 없습니다: " + ", ".join(missing))
             return
@@ -790,10 +804,13 @@ def review_page() -> None:
     metric_cols = st.columns(6)
     metric_cols[0].metric("랭킹", f"{fmt_number(row.get('ranking_score')) or '-'}/100")
     realism = row.get("realism_probability")
-    try:
-        realism_text = f"{float(realism) * 100:.1f}%" if pd.notna(realism) else "-"
-    except (TypeError, ValueError):
-        realism_text = "-"
+    if safe_text(row.get("evaluation_mode")) == "kev_only":
+        realism_text = "미사용"
+    else:
+        try:
+            realism_text = f"{float(realism) * 100:.1f}%" if pd.notna(realism) else "-"
+        except (TypeError, ValueError):
+            realism_text = "-"
     metric_cols[1].metric("R · P(VP)", realism_text)
     metric_cols[2].metric("A · 다양성", f"{fmt_number(row.get('A')) or '-'}/30")
     metric_cols[3].metric("B · 실행 가능성", f"{fmt_number(row.get('B')) or '-'}/25")
