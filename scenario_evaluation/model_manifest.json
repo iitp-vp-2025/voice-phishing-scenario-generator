@@ -1,6 +1,6 @@
 {
   "realism_student": {
-    "path": "models/realism/best_student.pt",
+    "path": "best_student.pt",
     "sha256": "a1f70185412879684b2b1739792f682fe6e0daeb18e215457a6891aa84e83f77",
     "size_bytes": 111243542,
     "distribution": "private_local_only",

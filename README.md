@@ -21,11 +21,7 @@ sLLM-Voice-Phishing-Generation-Pipeline
 ├── references
 │   └── README.md                   # Placement guide for local-only references
 │
-├── models
-│   └── realism
-│       ├── README.md               # Placement guide for the optional R model
-│       └── best_student.pt          # Local-only; not included in Git
-│
+├── best_student.pt                  # Optional local R-model weight; not included in Git
 ├── main.py                         # (MAIN) Run the complete pipeline
 ├── dashboard.py                    # Streamlit execution and review page
 ├── .env.example                    # Environment variable template; commit this file
@@ -34,7 +30,7 @@ sLLM-Voice-Phishing-Generation-Pipeline
 └── README.md
 ```
 
-Data, generated results, reference contents, and model weights are local-only and are not included in this repository. The tracked placement guides keep the expected `references/` and `models/realism/` layouts visible after cloning.
+Data, generated results, reference contents, and model weights are local-only and are not included in this repository. `best_student.pt` is placed at the project root when R evaluation is needed.
 
 ## How to Run?
 
@@ -58,7 +54,7 @@ Data, generated results, reference contents, and model weights are local-only an
    KEV_API_URL=http://127.0.0.1:8009
    KEV_MODEL=kev-latest
 
-   DISTILKOBERT_MODEL_PATH=models/realism/best_student.pt
+   DISTILKOBERT_MODEL_PATH=best_student.pt
    DISTILKOBERT_DEVICE=auto
    ```
 
@@ -139,10 +135,13 @@ If a private dialogue-style reference is available, it can additionally be place
 
 ## Optional DistilKoBERT Model
 
-`best_student.pt` is a model weight file, not a reference document, so it belongs under the model directory:
+Place `best_student.pt` directly in the project root, next to `main.py`:
 
 ```text
-models/realism/best_student.pt
+sLLM-Voice-Phishing-Generation-Pipeline/
+├── best_student.pt
+├── main.py
+└── dashboard.py
 ```
 
 This file enables the R-axis evaluation. If it is absent, the pipeline skips R and runs with KEV A-D only. The model weight and all reference contents remain excluded from Git.

@@ -30,7 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REFERENCES_DIR = PROJECT_ROOT / "references"
 GENERATE_OUTPUT_DIR = PROJECT_ROOT / "outputs" / "generate_scenario"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / "evaluate_scenario"
-DEFAULT_STUDENT_PATH = PROJECT_ROOT / "models" / "realism" / "best_student.pt"
+DEFAULT_STUDENT_PATH = PROJECT_ROOT / "best_student.pt"
 PATHS = {
     "generated_jsonl": GENERATE_OUTPUT_DIR / "generated_scenarios.jsonl",
     "scenario_pdf": REFERENCES_DIR / "Scenario.pdf",
