@@ -511,14 +511,7 @@ def show_review_summary(row: pd.Series) -> None:
             probability = f"{float(probability) * 100:.1f}%"
         except ValueError:
             pass
-        rows.insert(1, ("Student P(VP)", probability))
-    confidence = safe_text(row.get("realism_confidence"))
-    if confidence:
-        try:
-            confidence = f"{float(confidence) * 100:.1f}%"
-        except ValueError:
-            pass
-        rows.insert(2, ("Student 예측 신뢰도", confidence))
+        rows.insert(1, ("R · P(VP)", probability))
     html = ["<div class='review-summary'>"]
     for label, value in rows:
         html.append(
