@@ -129,7 +129,7 @@ Put optional reference inputs in `references/`. The pipeline checks these exact 
 | `references/Tactic.pdf` | Generation | Supplies high-level attack-tactic context to the dialogue-generation prompt. |
 | `references/Technique.pdf` | Generation | Supplies concrete technical and social-engineering technique context. |
 | `references/Scenario.pdf` | Generation and KEV evaluation | Provides existing-scenario context during generation and optional comparison context during A-D evaluation. |
-| `references/positive_format_refs.jsonl` | Generation only | Supplies private positive-call examples for dialogue style and interaction structure. It is never sent to DistilKoBERT or KEV. |
+| `references/positive_format_refs.jsonl` | Generation | Supplies private positive-call examples for dialogue style and interaction structure. It is never sent to DistilKoBERT or KEV. 
 | `models/realism/best_student.pt` | Optional R evaluation | Supplies the fine-tuned DistilKoBERT weights. Without it, the pipeline automatically uses KEV-only A-D ranking. |
 
 `positive_format_refs.jsonl` accepts one JSON object per line. A minimal record is:
