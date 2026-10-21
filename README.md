@@ -1,6 +1,6 @@
 # sLLM Voice Phishing Generation Pipeline
 
-뉴스 키워드 수집, 한국어 보이스피싱 대화 생성, KEV 평가, 최약 항목 refinement와 최종 랭킹을 한 번에 수행하는 파이프라인입니다. 승인된 DistilKoBERT checkpoint가 있으면 현실성 R 평가도 자동으로 추가합니다.
+뉴스 키워드 수집부터 한국어 보이스피싱 대화 생성, KEV 평가, 최약 항목 refinement, 최종 랭킹까지 한 번에 수행하고, 최종적으로 전문가가 결과를 쉽게 검토할 수 있는 웹 화면을 제공하는 파이프라인입니다.
 
 ## Project Structure
 
