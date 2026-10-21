@@ -123,15 +123,14 @@ Each result records `evaluation_mode` as `full` or `kev_only`; KEV-only mode lea
 
 ## Reference Files
 
-The PDFs are optional and stay outside Git. Place them under `references/` using these exact names.
+Place the four optional files under `references/`. Their contents are not included in Git.
 
-| File | Role in the pipeline |
+| File | Role |
 |---|---|
-| `Tactic.pdf` | Provides the high-level attack objective and progression used when generating a dialogue, such as trust building, pressure, and inducing an action. |
-| `Technique.pdf` | Provides concrete methods used to realize a tactic, such as impersonation, authentication requests, channel switching, or technical manipulation. |
-| `Scenario.pdf` | Provides existing scenario context. Generation uses it to avoid simple repetition, and KEV uses it as optional comparison context when scoring A-D. |
-
-If a private dialogue-style reference is available, it can additionally be placed at `references/positive_format_refs.jsonl`. It is used during generation for dialogue style and is not sent to DistilKoBERT or KEV.
+| `Tactic.pdf` | Defines the attack objective and overall progression for generation. |
+| `Technique.pdf` | Provides concrete technical and social-engineering methods for generation. |
+| `Scenario.pdf` | Helps generation avoid repetition and provides comparison context for KEV A-D. |
+| `positive_format_refs.jsonl` | Provides dialogue style and interaction structure for generation. |
 
 ## Optional DistilKoBERT Model
 
