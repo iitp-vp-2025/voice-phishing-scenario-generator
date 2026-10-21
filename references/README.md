@@ -5,10 +5,10 @@ The reference contents are intentionally excluded from Git; only this placement 
 
 ```text
 references/
-├── Tactic.pdf                    # Generation: high-level attack tactics
-├── Technique.pdf                 # Generation: technical/social-engineering techniques
-├── Scenario.pdf                  # Generation and KEV evaluation: existing scenarios
-├── positive_format_refs.jsonl    # Generation only: private positive-call format examples
+├── Tactic.pdf                    # Generation: attack objective and progression
+├── Technique.pdf                 # Generation: concrete methods that realize a tactic
+├── Scenario.pdf                  # Generation/KEV: existing-scenario comparison context
+├── positive_format_refs.jsonl    # Optional generation-style reference only
 └── README.md
 ```
 

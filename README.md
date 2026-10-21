@@ -57,7 +57,7 @@ Data, generated results, reference contents, and model weights are local-only an
    DISTILKOBERT_DEVICE=auto
    ```
 
-3. (Optional) Add generation/evaluation references under `references/`. See [Local Inputs](#local-inputs) for the exact filenames and purpose of each file. Missing references are skipped automatically.
+3. (Optional) Add the PDF references described in [Reference Files](#reference-files) under `references/`. Missing references are skipped automatically.
 
 4. (Optional) To include the R axis, place the approved private DistilKoBERT checkpoint at `DISTILKOBERT_MODEL_PATH`. Its SHA-256 must match `scenario_evaluation/model_manifest.json`. If the path is empty or the file does not exist, the pipeline automatically runs in KEV-only A-D mode.
 
@@ -120,25 +120,27 @@ KEV-only ranking = 100 × A^0.3571 × B^0.2143 × C^0.2143 × D^0.2143
 
 Each result records `evaluation_mode` as `full` or `kev_only`; KEV-only mode leaves all R fields empty instead of fabricating an R score.
 
-## Local Inputs
+## Reference Files
 
-Put optional reference inputs in `references/`. The pipeline checks these exact paths automatically; missing files are skipped.
+The PDFs are optional and stay outside Git. Place them under `references/` using these exact names.
 
-| Local path | Used by | Purpose |
-|---|---|---|
-| `references/Tactic.pdf` | Generation | Supplies high-level attack-tactic context to the dialogue-generation prompt. |
-| `references/Technique.pdf` | Generation | Supplies concrete technical and social-engineering technique context. |
-| `references/Scenario.pdf` | Generation and KEV evaluation | Provides existing-scenario context during generation and optional comparison context during A-D evaluation. |
-| `references/positive_format_refs.jsonl` | Generation only | Supplies private positive-call examples for dialogue style and interaction structure. It is never sent to DistilKoBERT or KEV. |
-| `models/realism/best_student.pt` | Optional R evaluation | Supplies the fine-tuned DistilKoBERT weights. Without it, the pipeline automatically uses KEV-only A-D ranking. |
+| File | Role in the pipeline |
+|---|---|
+| `Tactic.pdf` | Provides the high-level attack objective and progression used when generating a dialogue, such as trust building, pressure, and inducing an action. |
+| `Technique.pdf` | Provides concrete methods used to realize a tactic, such as impersonation, authentication requests, channel switching, or technical manipulation. |
+| `Scenario.pdf` | Provides existing scenario context. Generation uses it to avoid simple repetition, and KEV uses it as optional comparison context when scoring A-D. |
 
-`positive_format_refs.jsonl` accepts one JSON object per line. A minimal record is:
+If a private dialogue-style reference is available, it can additionally be placed at `references/positive_format_refs.jsonl`. It affects generation style only and is not sent to DistilKoBERT or KEV.
 
-```json
-{"text": "speaker와 발화가 포함된 통화 전사", "label": 1}
+## Optional DistilKoBERT Model
+
+`best_student.pt` is a model weight file, not a reference document, so it belongs under the model directory:
+
+```text
+models/realism/best_student.pt
 ```
 
-All files above remain excluded from Git. `outputs/` is also ignored, but it is created automatically by the pipeline and users should not place input files there.
+This file enables the R-axis evaluation. If it is absent, the pipeline skips R and runs with KEV A-D only. The model weight and all reference contents remain excluded from Git.
 
 ## Acknowledgement
 
