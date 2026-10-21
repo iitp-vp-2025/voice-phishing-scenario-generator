@@ -21,7 +21,7 @@ sLLM-Voice-Phishing-Generation-Pipeline
 ├── references
 │   └── README.md                   # Placement guide for local-only references
 │
-├── best_student.pt                  # Optional local R-model weight; not included in Git
+├── best_student.pt                 # Optional local R-model weight; not included in Git
 ├── main.py                         # (MAIN) Run the complete pipeline
 ├── dashboard.py                    # Streamlit execution and review page
 ├── .env.example                    # Environment variable template; commit this file
