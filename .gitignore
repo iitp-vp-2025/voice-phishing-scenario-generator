@@ -45,5 +45,10 @@ pytorch_model.bin
 Report/
 *.tmp
 
+# Local development helpers excluded from the minimal public pipeline.
+tests/
+docs/
+Run_pipeline.py
+
 # Local/reference documents are not distributed.
 *.pdf
