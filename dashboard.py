@@ -274,8 +274,6 @@ def fmt_number(value: Any) -> str:
 
 def discover_source_files() -> list[Path]:
     patterns = [
-        "end_to_end/*/dataset/dataset_sorted.csv",
-        "end_to_end/*/evaluate_scenario/final_evaluations.csv",
         "run_pipeline/final_evaluations.csv",
         "evaluate_scenario/dialogue_evaluations.csv",
         # Legacy output names remain readable.
@@ -285,6 +283,15 @@ def discover_source_files() -> list[Path]:
     ]
     files: list[Path] = []
     seen: set[Path] = set()
+    for run_dir in (OUTPUTS_DIR / "end_to_end").glob("*"):
+        for path in [
+            run_dir / "dataset" / "dataset_sorted.csv",
+            run_dir / "evaluate_scenario" / "final_evaluations.csv",
+        ]:
+            if path.is_file():
+                files.append(path)
+                seen.add(path.resolve())
+                break
     for pattern in patterns:
         for path in OUTPUTS_DIR.glob(pattern):
             resolved = path.resolve()
