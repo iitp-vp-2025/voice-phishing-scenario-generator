@@ -1,89 +1,46 @@
 # sLLM Voice Phishing Generation Pipeline
 
-뉴스 키워드 수집부터 한국어 보이스피싱 대화 생성, KEV 평가, 최약 항목 refinement, 최종 랭킹까지 한 번에 수행하고, 최종적으로 전문가가 결과를 쉽게 검토할 수 있는 웹 화면을 제공하는 파이프라인입니다.
-
-## Project Structure
-
-```graphql
-sLLM-Voice-Phishing-Generation-Pipeline
-├── generation
-│   ├── __init__.py
-│   ├── keyword_collector.py        # Collect and curate technology/social keywords
-│   └── scenario_generator.py       # Generate structured 10-turn Korean dialogues
-│
-├── scenario_evaluation
-│   ├── __init__.py
-│   ├── evaluator.py                # Evaluate R and KEV A-D rubric scores
-│   ├── realism_judge.py            # Run the fine-tuned DistilKoBERT classifier
-│   ├── refiner.py                  # Refine the weakest KEV subcriterion
-│   └── model_manifest.json         # Private checkpoint integrity metadata
-│
-├── references
-│   └── README.md                   # Placement guide for local-only references
-│
-├── best_student.pt                 # Optional local R-model weight; not included in Git
-├── main.py                         # (MAIN) Run the complete pipeline
-├── dashboard.py                    # Streamlit execution and review page
-├── .env.example                    # Environment variable template; commit this file
-├── .gitignore                      # Exclude .env, data, outputs, references, and weights
-├── requirements.txt                # Python dependencies
-└── README.md
-```
-
-Data, generated results, reference contents, and model weights are local-only and are not included in this repository. `best_student.pt` is placed at the project root when R evaluation is needed.
+뉴스 키워드 수집, 한국어 보이스피싱 대화 생성, KEV 평가, 최약 항목 refinement, 최종 랭킹을 한 번에 수행하고 전문가가 결과를 쉽게 검토할 수 있는 웹 화면을 제공합니다.
 
 ## How to Run
 
-Follow the steps below from top to bottom. The pipeline, the generation model server, and the KEV server are three separate processes.
-
-### 1. Clone the repository
+### 1. 저장소 설치
 
 ```bash
 git clone https://github.com/iitp-vp-2025/voice-phishing-scenario-generator.git
 cd voice-phishing-scenario-generator
-```
 
-### 2. Create the Python environment
-
-Python 3.12 or 3.13 is recommended.
-
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+cp .env.example .env
 ```
 
-Run the following command whenever you open a new terminal for this project:
+### 2. 생성 모델 서버 실행
 
-```bash
-cd voice-phishing-scenario-generator
-source .venv/bin/activate
-```
-
-### 3. Prepare the generation model server
-
-This pipeline calls an Ollama-compatible `/api/generate` endpoint. If Ollama is not installed, install it from the [official Ollama download page](https://ollama.com/download), then start it and download a generation model.
+[Ollama](https://ollama.com/download)를 설치한 뒤 첫 번째 터미널에서 실행합니다. 이미 Ollama가 실행 중이면 이 명령은 생략합니다.
 
 ```bash
 ollama serve
 ```
 
-In another terminal:
+두 번째 터미널에서 사용할 모델을 받습니다.
 
 ```bash
-ollama pull <GENERATION_MODEL>
+ollama pull qwen3.8:27b-q4_K_M
 curl -s http://127.0.0.1:11434/v1/models
 ```
 
-The value used for `<GENERATION_MODEL>` must appear in the model list returned by `curl`.
+응답에 `qwen3.8:27b-q4_K_M`이 보이면 준비된 상태입니다.
 
-### 4. Prepare the KEV server
+### 3. KEV 서버 실행
 
-Install and run [Kev](https://github.com/jaredpalmer/kev) in a separate directory. The following example uses the smaller 0.8B model on port `8009`.
+세 번째 터미널에서 [Kev](https://github.com/jaredpalmer/kev)를 파이프라인 저장소와 별도 폴더에 설치하고 실행합니다.
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
+source "$HOME/.local/bin/env"
+
 cd ..
 git clone https://github.com/jaredpalmer/kev.git
 cd kev
@@ -94,17 +51,15 @@ uv run --extra serve python -m kev.serve \
   --port 8009
 ```
 
-Keep that terminal open. In another terminal, verify the server:
+네 번째 터미널에서 서버 응답을 확인합니다.
 
 ```bash
 curl -s http://127.0.0.1:8009/v1/models
 ```
 
-The response must contain `kev-latest` before running the pipeline.
+응답에 `kev-latest`가 보이면 준비된 상태입니다.
 
-### 5. Connect to remote servers when necessary
-
-Skip this step when Ollama and KEV run on the same computer as the pipeline. When both services run on a remote server, keep the following SSH tunnel open:
+서버를 다른 컴퓨터에서 실행한다면 로컬 터미널에서 다음 터널을 계속 열어 둡니다. 이 경우 아래 `.env`의 생성 모델 포트를 `11500`으로 바꿉니다.
 
 ```bash
 ssh -p <SSH_PORT> -N \
@@ -113,29 +68,15 @@ ssh -p <SSH_PORT> -N \
   <USER>@<SERVER>
 ```
 
-Then verify both local tunnel endpoints:
+### 4. `.env` 설정
 
-```bash
-curl -s http://127.0.0.1:11500/v1/models
-curl -s http://127.0.0.1:8009/v1/models
-```
-
-### 6. Configure `.env`
-
-Return to the pipeline repository, create `.env`, and edit it with the values verified above.
-
-```bash
-cd <PATH_TO>/voice-phishing-scenario-generator
-cp .env.example .env
-```
-
-Example for locally running Ollama and KEV:
+파이프라인 저장소의 `.env`를 열고 다음 값을 설정합니다. `NEWS_API_KEY`는 [NewsAPI](https://newsapi.org/register)에서 발급받습니다.
 
 ```dotenv
-NEWS_API_KEY=your_newsapi_key
+NEWS_API_KEY=발급받은_NewsAPI_키
 
 SLLM_API_URL=http://127.0.0.1:11434/api/generate
-SLLM_MODEL=<GENERATION_MODEL>
+SLLM_MODEL=qwen3.8:27b-q4_K_M
 
 KEV_API_URL=http://127.0.0.1:8009
 KEV_MODEL=kev-latest
@@ -144,128 +85,70 @@ DISTILKOBERT_MODEL_PATH=best_student.pt
 DISTILKOBERT_DEVICE=auto
 ```
 
-When the Ollama SSH tunnel uses port `11500`, change only this line:
+`best_student.pt`가 없으면 마지막 두 줄은 그대로 두어도 됩니다. 파이프라인이 R 평가를 건너뛰고 KEV A-D만 사용합니다.
 
-```dotenv
-SLLM_API_URL=http://127.0.0.1:11500/api/generate
+### 5. 선택 파일 배치
+
+파일이 있다면 아래 위치에 복사합니다. 전부 없어도 파이프라인은 실행됩니다.
+
+| 위치 | 역할 |
+|---|---|
+| `best_student.pt` | 프로젝트 루트에 두며, DistilKoBERT의 R 평가에 사용 |
+| `references/Tactic.pdf` | 공격 목적과 전체 전개 참고 |
+| `references/Technique.pdf` | 구체적인 기술·사회공학 수법 참고 |
+| `references/Scenario.pdf` | 기존 시나리오와 중복을 줄이기 위한 참고 |
+| `references/positive_format_refs.jsonl` | 양성 대화의 문체와 상호작용 형식 참고 |
+
+이 파일들은 Git에 포함되지 않습니다.
+
+### 6. 파이프라인 실행
+
+새 터미널에서 파이프라인 저장소로 이동하고 가상환경을 활성화합니다.
+
+```bash
+cd voice-phishing-scenario-generator
+source .venv/bin/activate
 ```
 
-Create a [NewsAPI key](https://newsapi.org/register) if needed. `NEWS_API_KEY`, `SLLM_API_URL`, `SLLM_MODEL`, `KEV_API_URL`, and `KEV_MODEL` are required. Do not commit `.env`.
-
-### 7. Add optional local files
-
-- To use the R axis, copy `best_student.pt` next to `main.py`.
-- To use local references, copy the four files listed in [Reference Files](#reference-files) into `references/`.
-- If these files are unavailable, leave them out. Without `best_student.pt`, ranking automatically uses KEV A-D only.
-
-### 8. Run a one-scenario smoke test
-
-From the pipeline repository with `.venv` activated:
+먼저 1개로 동작을 확인합니다.
 
 ```bash
 python main.py --count 1 --max-attempts 3
 ```
 
-The pipeline runs in this order:
-
-```text
-News collection
-→ keyword selection
-→ 10-turn Korean dialogue generation
-→ initial evaluation
-→ weakest KEV subcriterion refinement
-→ final evaluation and ranking
-```
-
-On success, the terminal prints `End-to-end pipeline complete` and the created run directory.
-
-### 9. Run the full experiment
-
-After the smoke test succeeds:
+성공하면 10개를 생성합니다.
 
 ```bash
 python main.py --count 10 --max-attempts 15
 ```
 
-Results are created under:
+최종 결과는 다음 위치에 저장됩니다.
 
 ```text
-outputs/end_to_end/run_YYYYMMDD_HHMMSS/
-├── generate_scenario/generated_scenarios.jsonl
-├── evaluate_scenario/final_evaluations.csv
-├── refine_scenario/refinement_trace.csv
-├── dataset/dataset_sorted.csv
-└── manifest.json
+outputs/end_to_end/run_YYYYMMDD_HHMMSS/dataset/dataset_sorted.csv
 ```
 
-To evaluate an existing run again without collecting news or regenerating the initial dialogues:
-
-```bash
-python main.py --count 10 --reevaluate-run run_YYYYMMDD_HHMMSS
-```
-
-### 10. Open the expert review dashboard
+### 7. 웹 화면 실행
 
 ```bash
 python -m streamlit run dashboard.py
 ```
 
-Open `http://127.0.0.1:8501` in a browser. Select `결과 검토` to inspect rankings, rubric scores, refined turns, and the generated dialogue.
+브라우저에서 `http://127.0.0.1:8501`을 열고 `결과 검토`를 선택합니다.
 
-### Common errors
-
-| Message or symptom | What to check |
-|---|---|
-| `Connection refused` on `11500` or `8009` | The service or SSH tunnel is not running. Repeat the corresponding `curl` check. |
-| `Address already in use` while opening a tunnel | Another tunnel already uses that local port. Test it with `curl` before opening another one. |
-| `NEWS_API_KEY를 설정하세요` | Add a valid NewsAPI key to `.env`. |
-| `DistilKoBERT checkpoint가 없어 KEV-only` | This is a warning, not a failure. Add `best_student.pt` only when R evaluation is required. |
-| DistilKoBERT SHA-256 mismatch | Use the approved checkpoint recorded in `scenario_evaluation/model_manifest.json`. |
-
-## Evaluation
-
-| Axis | Description | Full mode | KEV-only mode |
-|---|---|---:|---:|
-| R | Voice-phishing realism from fine-tuned DistilKoBERT | 30% | Not used |
-| A | Diversity | 25% | 35.71% |
-| B | Feasibility | 15% | 21.43% |
-| C | Completeness | 15% | 21.43% |
-| D | Generalizability and adaptability | 15% | 21.43% |
-
-- R uses the mean of the two highest `P(voice_phishing)` values from turn-boundary-preserving 512-token chunks.
-- A-D use 11 KEV score questions and only evidence present in the generated dialogue.
-- Refinement targets the weakest A-D subcriterion and replaces at most three turns.
+## Project Structure
 
 ```text
-full ranking     = 100 × R^0.30 × A^0.25 × B^0.15 × C^0.15 × D^0.15
-KEV-only ranking = 100 × A^0.3571 × B^0.2143 × C^0.2143 × D^0.2143
+voice-phishing-scenario-generator/
+├── generation/                 # 키워드 수집 및 시나리오 생성
+├── scenario_evaluation/        # R·KEV 평가 및 refinement
+├── references/                 # 선택적인 로컬 참고 자료
+├── best_student.pt             # 선택적인 R 평가 가중치(Git 제외)
+├── main.py                     # 전체 파이프라인 실행
+├── dashboard.py                # Streamlit 실행·검토 화면
+├── .env.example                # 환경변수 예시
+└── requirements.txt            # Python 패키지 목록
 ```
-
-Each result records `evaluation_mode` as `full` or `kev_only`; KEV-only mode leaves all R fields empty instead of fabricating an R score.
-
-## Reference Files
-
-Place the four optional files under `references/`. Their contents are not included in Git.
-
-| File | Role |
-|---|---|
-| `Tactic.pdf` | Defines the attack objective and overall progression for generation. |
-| `Technique.pdf` | Provides concrete technical and social-engineering methods for generation. |
-| `Scenario.pdf` | Helps generation avoid repetition and provides comparison context for KEV A-D. |
-| `positive_format_refs.jsonl` | Provides dialogue style and interaction structure for generation. |
-
-## Optional DistilKoBERT Model
-
-Place `best_student.pt` directly in the project root, next to `main.py`:
-
-```text
-sLLM-Voice-Phishing-Generation-Pipeline/
-├── best_student.pt
-├── main.py
-└── dashboard.py
-```
-
-This file enables the R-axis evaluation. If it is absent, the pipeline skips R and runs with KEV A-D only. The model weight and all reference contents remain excluded from Git.
 
 ## Acknowledgement
 
