@@ -1,10 +1,10 @@
 # sLLM Voice Phishing Generation Pipeline
 
-뉴스 키워드 수집, 한국어 보이스피싱 대화 생성, KEV 평가, 최약 항목 refinement, 최종 랭킹을 한 번에 수행하고 전문가가 결과를 쉽게 검토할 수 있는 웹 화면을 제공합니다.
+This pipeline collects news keywords, generates Korean voice-phishing dialogues, evaluates them with KEV, refines the weakest criterion, produces a final ranking, and provides a web interface for expert review.
 
 ## How to Run
 
-### 1. 저장소 설치
+### 1. Clone and install the repository
 
 ```bash
 git clone https://github.com/iitp-vp-2025/voice-phishing-scenario-generator.git
@@ -16,26 +16,26 @@ python -m pip install -r requirements.txt
 cp .env.example .env
 ```
 
-### 2. 생성 모델 서버 실행
+### 2. Start the generation model server
 
-[Ollama](https://ollama.com/download)를 설치한 뒤 첫 번째 터미널에서 실행합니다. 이미 Ollama가 실행 중이면 이 명령은 생략합니다.
+Install [Ollama](https://ollama.com/download), then start it in the first terminal. Skip this command if Ollama is already running.
 
 ```bash
 ollama serve
 ```
 
-두 번째 터미널에서 사용할 모델을 받습니다.
+Download the generation model in a second terminal.
 
 ```bash
 ollama pull qwen3.8:27b-q4_K_M
 curl -s http://127.0.0.1:11434/v1/models
 ```
 
-응답에 `qwen3.8:27b-q4_K_M`이 보이면 준비된 상태입니다.
+The server is ready when the response contains `qwen3.8:27b-q4_K_M`.
 
-### 3. KEV 서버 실행
+### 3. Start the KEV server
 
-세 번째 터미널에서 [Kev](https://github.com/jaredpalmer/kev)를 파이프라인 저장소와 별도 폴더에 설치하고 실행합니다.
+In a third terminal, install [Kev](https://github.com/jaredpalmer/kev) in a directory outside the pipeline repository and start the server.
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -51,15 +51,15 @@ uv run --extra serve python -m kev.serve \
   --port 8009
 ```
 
-네 번째 터미널에서 서버 응답을 확인합니다.
+Verify the server from a fourth terminal.
 
 ```bash
 curl -s http://127.0.0.1:8009/v1/models
 ```
 
-응답에 `kev-latest`가 보이면 준비된 상태입니다.
+The server is ready when the response contains `kev-latest`.
 
-서버를 다른 컴퓨터에서 실행한다면 로컬 터미널에서 다음 터널을 계속 열어 둡니다. 이 경우 아래 `.env`의 생성 모델 포트를 `11500`으로 바꿉니다.
+If the generation model and KEV run on another computer, keep the following SSH tunnel open on the local computer. In this case, change the generation model port in `.env` to `11500`.
 
 ```bash
 ssh -p <SSH_PORT> -N \
@@ -68,12 +68,12 @@ ssh -p <SSH_PORT> -N \
   <USER>@<SERVER>
 ```
 
-### 4. `.env` 설정
+### 4. Configure `.env`
 
-파이프라인 저장소의 `.env`를 열고 다음 값을 설정합니다. `NEWS_API_KEY`는 [NewsAPI](https://newsapi.org/register)에서 발급받습니다.
+Open `.env` in the pipeline repository and set the following values. Create a `NEWS_API_KEY` on [NewsAPI](https://newsapi.org/register).
 
 ```dotenv
-NEWS_API_KEY=발급받은_NewsAPI_키
+NEWS_API_KEY=your_newsapi_key
 
 SLLM_API_URL=http://127.0.0.1:11434/api/generate
 SLLM_MODEL=qwen3.8:27b-q4_K_M
@@ -85,71 +85,71 @@ DISTILKOBERT_MODEL_PATH=best_student.pt
 DISTILKOBERT_DEVICE=auto
 ```
 
-`best_student.pt`가 없으면 마지막 두 줄은 그대로 두어도 됩니다. 파이프라인이 R 평가를 건너뛰고 KEV A-D만 사용합니다.
+If `best_student.pt` is unavailable, leave the last two lines unchanged. The pipeline will skip R evaluation and rank the results using KEV criteria A-D only.
 
-### 5. 선택 파일 배치
+### 5. Add optional local files
 
-파일이 있다면 아래 위치에 복사합니다. 전부 없어도 파이프라인은 실행됩니다.
+Copy the following files to the specified locations when available. The pipeline can run without them.
 
-| 위치 | 역할 |
+| Location | Purpose |
 |---|---|
-| `best_student.pt` | 프로젝트 루트에 두며, DistilKoBERT의 R 평가에 사용 |
-| `references/Tactic.pdf` | 공격 목적과 전체 전개 참고 |
-| `references/Technique.pdf` | 구체적인 기술·사회공학 수법 참고 |
-| `references/Scenario.pdf` | 기존 시나리오와 중복을 줄이기 위한 참고 |
-| `references/positive_format_refs.jsonl` | 양성 대화의 문체와 상호작용 형식 참고 |
+| `best_student.pt` | Fine-tuned DistilKoBERT weights for R evaluation; place at the project root |
+| `references/Tactic.pdf` | Reference for attack objectives and overall progression |
+| `references/Technique.pdf` | Reference for technical and social-engineering methods |
+| `references/Scenario.pdf` | Reference for reducing similarity to existing scenarios |
+| `references/positive_format_refs.jsonl` | Reference for positive-dialogue style and interaction structure |
 
-이 파일들은 Git에 포함되지 않습니다.
+These files are excluded from Git.
 
-### 6. 파이프라인 실행
+### 6. Run the pipeline
 
-새 터미널에서 파이프라인 저장소로 이동하고 가상환경을 활성화합니다.
+Open a new terminal, return to the pipeline repository, and activate the virtual environment.
 
 ```bash
 cd voice-phishing-scenario-generator
 source .venv/bin/activate
 ```
 
-먼저 1개로 동작을 확인합니다.
+Start with a one-scenario test.
 
 ```bash
 python main.py --count 1 --max-attempts 3
 ```
 
-성공하면 10개를 생성합니다.
+After the test succeeds, generate ten scenarios.
 
 ```bash
 python main.py --count 10 --max-attempts 15
 ```
 
-최종 결과는 다음 위치에 저장됩니다.
+The final ranked CSV is saved at:
 
 ```text
 outputs/end_to_end/run_YYYYMMDD_HHMMSS/dataset/dataset_sorted.csv
 ```
 
-### 7. 웹 화면 실행
+### 7. Open the web interface
 
 ```bash
 python -m streamlit run dashboard.py
 ```
 
-브라우저에서 `http://127.0.0.1:8501`을 열고 `결과 검토`를 선택합니다.
+Open `http://127.0.0.1:8501` in a browser and select the results review page.
 
 ## Project Structure
 
 ```text
 voice-phishing-scenario-generator/
-├── generation/                 # 키워드 수집 및 시나리오 생성
-├── scenario_evaluation/        # R·KEV 평가 및 refinement
-├── references/                 # 선택적인 로컬 참고 자료
-├── best_student.pt             # 선택적인 R 평가 가중치(Git 제외)
-├── main.py                     # 전체 파이프라인 실행
-├── dashboard.py                # Streamlit 실행·검토 화면
-├── .env.example                # 환경변수 예시
-└── requirements.txt            # Python 패키지 목록
+├── generation/                 # Keyword collection and scenario generation
+├── scenario_evaluation/        # R and KEV evaluation and refinement
+├── references/                 # Optional local reference files
+├── best_student.pt             # Optional R-evaluation weights (excluded from Git)
+├── main.py                     # Complete pipeline entry point
+├── dashboard.py                # Streamlit execution and review interface
+├── .env.example                # Environment variable template
+└── requirements.txt            # Python dependencies
 ```
 
 ## Acknowledgement
 
-This work was supported by Institute of Information & communications Technology Planning & Evaluation (IITP) grant funded by the Korea government (MSIT) (No. RS2025-02263169, Detection and Prediction of Emerging and Undiscovered Voice Phishing)
+This work was supported by Institute of Information & Communications Technology Planning & Evaluation (IITP) grant funded by the Korean government (MSIT) (No. RS2025-02263169, Detection and Prediction of Emerging and Undiscovered Voice Phishing).
