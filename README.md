@@ -32,73 +32,195 @@ sLLM-Voice-Phishing-Generation-Pipeline
 
 Data, generated results, reference contents, and model weights are local-only and are not included in this repository. `best_student.pt` is placed at the project root when R evaluation is needed.
 
-## How to Run?
+## How to Run
 
-1. Create and activate the Python environment.
+Follow the steps below from top to bottom. The pipeline, the generation model server, and the KEV server are three separate processes.
 
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   cp .env.example .env
-   ```
+### 1. Clone the repository
 
-2. Configure `.env`.
+```bash
+git clone https://github.com/iitp-vp-2025/voice-phishing-scenario-generator.git
+cd voice-phishing-scenario-generator
+```
 
-   ```dotenv
-   NEWS_API_KEY=your_newsapi_key
+### 2. Create the Python environment
 
-   SLLM_API_URL=http://127.0.0.1:11500/api/generate
-   SLLM_MODEL=your_generation_model
+Python 3.12 or 3.13 is recommended.
 
-   KEV_API_URL=http://127.0.0.1:8009
-   KEV_MODEL=kev-latest
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-   DISTILKOBERT_MODEL_PATH=best_student.pt
-   DISTILKOBERT_DEVICE=auto
-   ```
+Run the following command whenever you open a new terminal for this project:
 
-3. (Optional) Add the PDF references described in [Reference Files](#reference-files) under `references/`. Missing references are skipped automatically.
+```bash
+cd voice-phishing-scenario-generator
+source .venv/bin/activate
+```
 
-4. (Optional) To include the R axis, place the approved private DistilKoBERT checkpoint at `DISTILKOBERT_MODEL_PATH`. Its SHA-256 must match `scenario_evaluation/model_manifest.json`. If the path is empty or the file does not exist, the pipeline automatically runs in KEV-only A-D mode.
+### 3. Prepare the generation model server
 
-5. Start or connect to the sLLM and KEV services. When they run on another machine, use an SSH tunnel.
+This pipeline calls an Ollama-compatible `/api/generate` endpoint. If Ollama is not installed, install it from the [official Ollama download page](https://ollama.com/download), then start it and download a generation model.
 
-   ```bash
-   ssh -p <SSH_PORT> -N \
-     -L 11500:127.0.0.1:11500 \
-     -L 8009:127.0.0.1:8009 \
-     <USER>@<SERVER>
-   ```
+```bash
+ollama serve
+```
 
-6. Run the complete pipeline from the project root.
+In another terminal:
 
-   ```bash
-   python main.py --count 10
-   ```
+```bash
+ollama pull <GENERATION_MODEL>
+curl -s http://127.0.0.1:11434/v1/models
+```
 
-   ```text
-   News collection
-   → keyword selection
-   → 10-turn dialogue generation
-   → initial R/A/B/C/D evaluation (or A/B/C/D when no checkpoint exists)
-   → weakest KEV subcriterion refinement
-   → final evaluation and ranking
-   ```
+The value used for `<GENERATION_MODEL>` must appear in the model list returned by `curl`.
 
-7. To re-evaluate an existing local run without regenerating dialogues:
+### 4. Prepare the KEV server
 
-   ```bash
-   python main.py --count 10 --reevaluate-run run_YYYYMMDD_HHMMSS
-   ```
+Install and run [Kev](https://github.com/jaredpalmer/kev) in a separate directory. The following example uses the smaller 0.8B model on port `8009`.
 
-8. Open the review dashboard.
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+cd ..
+git clone https://github.com/jaredpalmer/kev.git
+cd kev
+uv sync --extra serve
+uv run --extra serve python -m kev.serve \
+  --run jaredpalmer/kev-0.8b \
+  --host 127.0.0.1 \
+  --port 8009
+```
 
-   ```bash
-   streamlit run dashboard.py
-   ```
+Keep that terminal open. In another terminal, verify the server:
 
-   Open `http://127.0.0.1:8501` in a browser.
+```bash
+curl -s http://127.0.0.1:8009/v1/models
+```
+
+The response must contain `kev-latest` before running the pipeline.
+
+### 5. Connect to remote servers when necessary
+
+Skip this step when Ollama and KEV run on the same computer as the pipeline. When both services run on a remote server, keep the following SSH tunnel open:
+
+```bash
+ssh -p <SSH_PORT> -N \
+  -L 11500:127.0.0.1:11500 \
+  -L 8009:127.0.0.1:8009 \
+  <USER>@<SERVER>
+```
+
+Then verify both local tunnel endpoints:
+
+```bash
+curl -s http://127.0.0.1:11500/v1/models
+curl -s http://127.0.0.1:8009/v1/models
+```
+
+### 6. Configure `.env`
+
+Return to the pipeline repository, create `.env`, and edit it with the values verified above.
+
+```bash
+cd <PATH_TO>/voice-phishing-scenario-generator
+cp .env.example .env
+```
+
+Example for locally running Ollama and KEV:
+
+```dotenv
+NEWS_API_KEY=your_newsapi_key
+
+SLLM_API_URL=http://127.0.0.1:11434/api/generate
+SLLM_MODEL=<GENERATION_MODEL>
+
+KEV_API_URL=http://127.0.0.1:8009
+KEV_MODEL=kev-latest
+
+DISTILKOBERT_MODEL_PATH=best_student.pt
+DISTILKOBERT_DEVICE=auto
+```
+
+When the Ollama SSH tunnel uses port `11500`, change only this line:
+
+```dotenv
+SLLM_API_URL=http://127.0.0.1:11500/api/generate
+```
+
+Create a [NewsAPI key](https://newsapi.org/register) if needed. `NEWS_API_KEY`, `SLLM_API_URL`, `SLLM_MODEL`, `KEV_API_URL`, and `KEV_MODEL` are required. Do not commit `.env`.
+
+### 7. Add optional local files
+
+- To use the R axis, copy `best_student.pt` next to `main.py`.
+- To use local references, copy the four files listed in [Reference Files](#reference-files) into `references/`.
+- If these files are unavailable, leave them out. Without `best_student.pt`, ranking automatically uses KEV A-D only.
+
+### 8. Run a one-scenario smoke test
+
+From the pipeline repository with `.venv` activated:
+
+```bash
+python main.py --count 1 --max-attempts 3
+```
+
+The pipeline runs in this order:
+
+```text
+News collection
+→ keyword selection
+→ 10-turn Korean dialogue generation
+→ initial evaluation
+→ weakest KEV subcriterion refinement
+→ final evaluation and ranking
+```
+
+On success, the terminal prints `End-to-end pipeline complete` and the created run directory.
+
+### 9. Run the full experiment
+
+After the smoke test succeeds:
+
+```bash
+python main.py --count 10 --max-attempts 15
+```
+
+Results are created under:
+
+```text
+outputs/end_to_end/run_YYYYMMDD_HHMMSS/
+├── generate_scenario/generated_scenarios.jsonl
+├── evaluate_scenario/final_evaluations.csv
+├── refine_scenario/refinement_trace.csv
+├── dataset/dataset_sorted.csv
+└── manifest.json
+```
+
+To evaluate an existing run again without collecting news or regenerating the initial dialogues:
+
+```bash
+python main.py --count 10 --reevaluate-run run_YYYYMMDD_HHMMSS
+```
+
+### 10. Open the expert review dashboard
+
+```bash
+python -m streamlit run dashboard.py
+```
+
+Open `http://127.0.0.1:8501` in a browser. Select `결과 검토` to inspect rankings, rubric scores, refined turns, and the generated dialogue.
+
+### Common errors
+
+| Message or symptom | What to check |
+|---|---|
+| `Connection refused` on `11500` or `8009` | The service or SSH tunnel is not running. Repeat the corresponding `curl` check. |
+| `Address already in use` while opening a tunnel | Another tunnel already uses that local port. Test it with `curl` before opening another one. |
+| `NEWS_API_KEY를 설정하세요` | Add a valid NewsAPI key to `.env`. |
+| `DistilKoBERT checkpoint가 없어 KEV-only` | This is a warning, not a failure. Add `best_student.pt` only when R evaluation is required. |
+| DistilKoBERT SHA-256 mismatch | Use the approved checkpoint recorded in `scenario_evaluation/model_manifest.json`. |
 
 ## Evaluation
 
