@@ -380,7 +380,7 @@ def enrich_from_jsonl(df: pd.DataFrame, source_path: Path) -> pd.DataFrame:
         for col, value in values.items():
             if col not in df.columns:
                 df[col] = ""
-            if not safe_text(df.at[idx, col]):
+            if not safe_text(df.at[idx, col]) and safe_text(value):
                 df.at[idx, col] = value
     return df
 
