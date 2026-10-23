@@ -33,9 +33,9 @@ curl -s http://127.0.0.1:11434/v1/models
 
 The server is ready when the response contains `qwen3.8:27b-q4_K_M`.
 
-### 3. Start the KEV server
+### 3. Start the KEV 4B server
 
-In a third terminal, install [Kev](https://github.com/jaredpalmer/kev) in a directory outside the pipeline repository and start the server.
+In a third terminal, install [Kev](https://github.com/jaredpalmer/kev) in a directory outside the pipeline repository and start the recommended Kev 4B checkpoint. The first launch downloads both the Qwen3.5-4B base model and the Kev adapter.
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -46,10 +46,12 @@ git clone https://github.com/jaredpalmer/kev.git
 cd kev
 uv sync --extra serve
 uv run --extra serve python -m kev.serve \
-  --run jaredpalmer/kev-0.8b \
+  --run jaredpalmer/kev-4b@v1.0 \
   --host 127.0.0.1 \
   --port 8009
 ```
+
+A CUDA-capable system or an Apple Silicon Mac with at least 32 GB of unified memory is recommended. On a resource-constrained machine, replace the run with `jaredpalmer/kev-0.8b@v1.0`.
 
 Verify the server from a fourth terminal.
 
@@ -57,7 +59,7 @@ Verify the server from a fourth terminal.
 curl -s http://127.0.0.1:8009/v1/models
 ```
 
-The server is ready when the response contains `kev-latest`.
+The server is ready when the response contains both `kev-latest` and `jaredpalmer/kev-4b`.
 
 If the generation model and KEV run on another computer, keep the following SSH tunnel open on the local computer. In this case, change the generation model port in `.env` to `11500`.
 
